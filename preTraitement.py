@@ -1,9 +1,9 @@
 import numpy as np
 from nltk.tokenize import RegexpTokenizer
 from nltk.util import ngrams  # This is the ngram magic
-
+import csv
 from fmeasures import fMeasure
-from pretraitement import *
+from pretraitement2 import *
 from similarityDetector import *
 from sklearn.metrics import confusion_matrix, plot_confusion_matrix
 
@@ -77,7 +77,7 @@ def removeStopWordsProfCsv():
     corpus = []
     corpuskeywords = []
     corpusentities = []
-    with open('inputCSV/test.csv') as inputData:
+    with open('inputCSV/test.csv',encoding="utf8") as inputData:
         reader = csv.reader(inputData)
         claims = list(reader)
         with open("outputCSV/pretraiteCSV.csv", "w") as outputData:
@@ -207,7 +207,7 @@ def confusiondata():
     print(len(model))
     print(len(prediction))
 
-    matrx = np.zeros(4)
+    matrx = np.zeros(4,4)
     for i in range(len(model)):
         if model[i]=="E":
             if prediction[i]=="E":
@@ -247,4 +247,120 @@ def confusiondata():
                 matrx[3,3]+=1
     print(matrx)
 
-confusiondata()
+
+def createfile():
+    with open('inputCSV/claimskg_result.csv',encoding="utf8") as input, open('inputCSV/samekeywords.csv','w+')as output:
+        header=['textA','textB','keywordsA','keywordsB','authorA','authorb','named_entitiesA','named_entitiesB']
+        reader = csv.reader(input)
+        claims = list(reader)
+        writer = csv.writer(output)
+        writer.writerow(header)
+        corpuskeywords = []
+        data=[]
+        print(len(claims))
+        counter=1
+        for i in claims:
+            print(counter)
+            counter+=1
+            for j in claims:
+                corpuskeywords.clear()
+                data.clear()
+                keywordsa=i[9]
+                keywordsb=j[9]
+                corpuskeywords.append(keywordsa)
+                corpuskeywords.append(keywordsb)
+                tfidf_matrix = tfidf_vectorizer.fit_transform(corpuskeywords)
+                cosine = cosine_similarity(tfidf_matrix, tfidf_matrix)
+                tfidf_key_value = cosine[0][1]
+                if tfidf_key_value>0.7:
+                    texta=i[1]
+                    textb=j[1]
+                    named_entitiesa=i[7]
+                    named_entitiesb=j[7]
+                    authora=i[5]
+                    authorB=j[5]
+                    data.append(texta)
+                    data.append(textb)
+                    data.append(keywordsa)
+                    data.append(keywordsb)
+                    data.append(authora)
+                    data.append(authorB)
+                    data.append(named_entitiesa)
+                    data.append(named_entitiesb)
+                    writer.writerow(data)
+
+
+#createfile()
+
+
+
+def makeresults():
+    header2 = ['TexteA', 'TextB', 'TextAPT', 'TextBPT', 'TFIDF','Score Keywords', 'Score entities', 'RESULT' ]
+    corpus = []
+    corpuskeywords = []
+    corpusentities = []
+    with open('inputCSV/samekeywords.csv', encoding='cp1252') as inputData:
+        reader = csv.reader(inputData)
+        claims = list(reader)
+        with open("outputCSV/finaltest.csv", "w+") as outputData:
+            writer = csv.writer(outputData)
+            writer.writerow(header2)
+            counter = 1
+
+            for claim in claims:
+                if claim:
+                    # print(counter)
+                    counter += 1
+                    # data reset
+                    data.clear()
+                    corpus.clear()
+                    corpuskeywords.clear()
+                    corpusentities.clear()
+                    # original text A and B before Modifications
+                    textA = claim[0]
+                    textB = claim[1]
+                    # text A and B after removing stop words lowering and removine punctuation
+                    textA_After = normalize(textA)
+                    textB_After = normalize(textB)
+                    # print(claim[8], claim[9])
+                    # keyword
+                    keywordsA = normalize(claim[2].lower())
+                    keywordsB = normalize(claim[3].lower())
+                    # entities
+                    entiteA = normalize(claim[4].replace('_', ' '))
+                    entiteB = normalize(claim[5].replace('_', ' '))
+                    corpus.append(textA_After)
+                    corpus.append(textB_After)
+                    tfidf_matrix = tfidf_vectorizer.fit_transform(corpus)
+                    cosine = cosine_similarity(tfidf_matrix, tfidf_matrix)
+                    tfidf_value = round(cosine[0][1], 2)
+
+                    # calculating TF-IDF kEYWORDS
+                    corpuskeywords.append(keywordsA)
+                    corpuskeywords.append(keywordsB)
+                    tfidf_matrix = tfidf_vectorizer.fit_transform(corpuskeywords)
+                    cosine = cosine_similarity(tfidf_matrix, tfidf_matrix)
+                    tfidf_key_value = cosine[0][1]
+
+                    # calculating TF-IDF entities
+                    corpusentities.append(entiteA)
+                    corpusentities.append(entiteB)
+                    tfidf_matrix = tfidf_vectorizer.fit_transform(corpusentities)
+                    cosine = cosine_similarity(tfidf_matrix, tfidf_matrix)
+                    tfidf_entities_value = cosine[0][1]
+
+                    actual_result = getResult(counter, tfidf_value, tfidf_key_value, claim[6], claim[7])
+                    # actual_result = makeResulat(tfidf_key_value, threshold)
+                    # adding data
+                    data.append(textA)
+                    data.append(textB)
+                    data.append(textA_After)
+                    data.append(textB_After)
+                    data.append(tfidf_value)
+                    data.append(tfidf_key_value)
+                    data.append(tfidf_entities_value)
+                    data.append(actual_result)
+                    writer.writerow(data)
+
+
+makeresults()
