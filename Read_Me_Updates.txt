@@ -1,6 +1,6 @@
 Update 24/03/2022
 
-en moyenner pour
+en moyenne pour
 E:
     TFIDF :  52.08193036830566
     jac :  85.82809315803947
